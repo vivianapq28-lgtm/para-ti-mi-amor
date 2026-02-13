@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>No peliemo ma pastelito 🥺</title>
+
+<style>
+body {
+    margin: 0;
+    background: linear-gradient(to bottom right, #000000, #2b2b2b, #ffccd5);
+    font-family: Arial, sans-serif;
+    text-align: center;
+    overflow: hidden;
+    color: white;
+}
+
+h1 {
+    margin-top: 100px;
+    font-size: 32px;
+}
+
+button {
+    padding: 15px 30px;
+    font-size: 18px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: 0.3s;
+    margin: 20px;
+}
+
+#yesBtn {
+    background-color: black;
+    color: white;
+}
+
+#noBtn {
+    background-color: #ff4d4d;
+    color: white;
+    position: absolute;
+}
+
+#game {
+    display: none;
+    margin-top: 50px;
+}
+
+#final {
+    display: none;
+    margin-top: 50px;
+}
+
+img {
+    width: 300px;
+    border-radius: 20px;
+    margin-top: 20px;
+}
+
+/* corazones negros */
+.heart {
+    position: fixed;
+    color: black;
+    font-size: 20px;
+    animation: floatUp 4s linear infinite;
+}
+
+@keyframes floatUp {
+    from { transform: translateY(100vh); opacity: 1; }
+    to { transform: translateY(-10vh); opacity: 0; }
+}
+</style>
+</head>
+
+<body>
+
+<h1>Si te he fallado te pido perdón… 🥺<br>de la única forma que sé 🖤</h1>
+
+<button id="yesBtn">Sí te perdono 🖤</button>
+<button id="noBtn">No, seguimos peleando, te odio 😤</button>
+
+<div id="game">
+    <h2>Mini juego: Atrápame si puedes 😈</h2>
+    <button id="catchBtn">Atrápame</button>
+</div>
+
+<div id="final">
+    <h1>NO PELIEMO MA 🥺🖤</h1>
+    <p>Te amo incluso cuando me pongo intensa.</p>
+    <img src="no-peliemos.jpg" alt="no peliemo ma">
+</div>
+
+<!-- Música -->
+<iframe width="0" height="0"
+src="https://www.youtube.com/embed/6MZw_Iv0wd0?autoplay=1&loop=1&playlist=6MZw_Iv0wd0"
+frameborder="0" allow="autoplay"></iframe>
+
+<script>
+let noBtn = document.getElementById("noBtn");
+let yesBtn = document.getElementById("yesBtn");
+let game = document.getElementById("game");
+let final = document.getElementById("final");
+let catchBtn = document.getElementById("catchBtn");
+
+let clickCount = 0;
+
+// Botón que huye
+noBtn.addEventListener("mouseover", function() {
+    noBtn.style.top = Math.random() * window.innerHeight + "px";
+    noBtn.style.left = Math.random() * window.innerWidth + "px";
+});
+
+// Click al botón NO
+noBtn.addEventListener("click", function() {
+    clickCount++;
+
+    if (clickCount < 3) {
+        noBtn.style.transform = "scale(" + (1 + clickCount) + ")";
+    } else {
+        game.style.display = "block";
+    }
+});
+
+// Mini juego
+catchBtn.addEventListener("mouseover", function() {
+    catchBtn.style.position = "absolute";
+    catchBtn.style.top = Math.random() * window.innerHeight + "px";
+    catchBtn.style.left = Math.random() * window.innerWidth + "px";
+});
+
+catchBtn.addEventListener("click", function() {
+    game.style.display = "none";
+    document.querySelector("h1").style.display = "none";
+    yesBtn.style.display = "none";
+    noBtn.style.display = "none";
+    final.style.display = "block";
+    createHearts();
+});
+
+// Si presiona sí desde el inicio
+yesBtn.addEventListener("click", function() {
+    document.querySelector("h1").style.display = "none";
+    yesBtn.style.display = "none";
+    noBtn.style.display = "none";
+    final.style.display = "block";
+    createHearts();
+});
+
+// Generar corazones negros flotando
+function createHearts() {
+    setInterval(function() {
+        let heart = document.createElement("div");
+        heart.className = "heart";
+        heart.innerHTML = "🖤";
+        heart.style.left = Math.random() * 100 + "vw";
+        document.body.appendChild(heart);
+
+        setTimeout(() => {
+            heart.remove();
+        }, 4000);
+    }, 300);
+}
+</script>
+
+</body>
+</html>

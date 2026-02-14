@@ -3,22 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <title>Mi Juego</title>
-
 <style>
-body {
-    margin: 0;
-    overflow: hidden;
-    background: black;
-}
-
-canvas {
-    display: block;
-    margin: auto;
-    background: linear-gradient(#5ec9ff, #e0f7ff);
-}
+body { margin:0; overflow:hidden; }
+canvas { display:block; margin:auto; }
 </style>
 </head>
-
 <body>
 <canvas id="game"></canvas>
 
@@ -29,7 +18,10 @@ const ctx = canvas.getContext("2d");
 canvas.width = 1000;
 canvas.height = 400;
 
+let worldWidth = 3000;
+let cameraX = 0;
 let gameOver = false;
+let levelComplete = false;
 
 // JUGADOR
 let player = {
@@ -38,43 +30,62 @@ let player = {
     width: 40,
     height: 40,
     dy: 0,
-    gravity: 0.6,
-    jumpPower: -12,
-    grounded: false
+    gravity: 0.8,
+    jumpPower: -14,
+    grounded: false,
+    speed: 4
 };
 
-// SUELO
-let ground = {
-    y: 350,
-    height: 50
-};
+let ground = { y: 350, height: 50 };
 
-// DRAGÓN
-let dragon = {
-    x: 850,
+// DRAGÓN FINAL
+let finalDragon = {
+    x: 2600,
     y: 270,
-    width: 80,
-    height: 80
+    width: 90,
+    height: 90
 };
 
-let fireballs = [];
-let fireParticles = [];
-let fireTimer = 0;
+// MINI DRAGONES
+let miniDragons = [
+    {x:600, y:310, width:40, height:40},
+    {x:1100, y:310, width:40, height:40},
+    {x:1600, y:310, width:40, height:40},
+    {x:2100, y:310, width:40, height:40}
+];
+
+// META
+let finishLine = 2850;
 
 let keys = {};
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
-function update() {
+function resetGame(){
+    player.x = 100;
+    player.y = 300;
+    player.dy = 0;
+    cameraX = 0;
+    gameOver = false;
+}
 
-    if (gameOver) return;
+function collision(a,b){
+    return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+    );
+}
 
-    // Movimiento
-    if (keys["ArrowRight"]) player.x += 5;
-    if (keys["ArrowLeft"]) player.x -= 5;
+function update(){
 
-    // Salto
-    if (keys[" "] && player.grounded) {
+    if(gameOver || levelComplete) return;
+
+    if(keys["ArrowRight"]) player.x += player.speed;
+    if(keys["ArrowLeft"]) player.x -= player.speed;
+
+    if(keys[" "] && player.grounded){
         player.dy = player.jumpPower;
         player.grounded = false;
     }
@@ -82,115 +93,105 @@ function update() {
     player.dy += player.gravity;
     player.y += player.dy;
 
-    if (player.y + player.height >= ground.y) {
+    if(player.y + player.height >= ground.y){
         player.y = ground.y - player.height;
         player.dy = 0;
         player.grounded = true;
     }
 
-    // Lanzar bolas de fuego
-    fireTimer++;
-    if (fireTimer > 90) {
-        fireballs.push({
-            x: dragon.x,
-            y: dragon.y + 40,
-            size: 18,
-            speed: 6
-        });
-        fireTimer = 0;
-    }
+    // Cámara sigue al jugador
+    cameraX = player.x - 300;
+    if(cameraX < 0) cameraX = 0;
+    if(cameraX > worldWidth - canvas.width)
+        cameraX = worldWidth - canvas.width;
 
-    fireballs.forEach(f => {
-        f.x -= f.speed;
-
-        if (
-            player.x < f.x + f.size &&
-            player.x + player.width > f.x &&
-            player.y < f.y + f.size &&
-            player.y + player.height > f.y
-        ) {
+    // Colisión mini dragones
+    miniDragons.forEach(d=>{
+        if(collision(player,d)){
             gameOver = true;
         }
     });
 
-    // Partículas de fuego del suelo
-    for (let i = 0; i < 3; i++) {
-        fireParticles.push({
-            x: 720 + Math.random() * 250,
-            y: ground.y,
-            size: 5 + Math.random() * 10,
-            speed: 1 + Math.random() * 2
-        });
+    // Colisión dragón final
+    if(collision(player,finalDragon)){
+        gameOver = true;
     }
 
-    fireParticles.forEach(p => {
-        p.y -= p.speed;
-    });
-
-    fireParticles = fireParticles.filter(p => p.y > 250);
+    // Línea de meta
+    if(player.x > finishLine){
+        levelComplete = true;
+    }
 }
 
-function drawDragon() {
-    ctx.fillStyle = "#5e2ca5";
-    ctx.fillRect(dragon.x, dragon.y, dragon.width, dragon.height);
-
-    // Ojo
-    ctx.fillStyle = "yellow";
-    ctx.fillRect(dragon.x + 50, dragon.y + 20, 12, 12);
-
-    // Boca
-    ctx.fillStyle = "black";
-    ctx.fillRect(dragon.x + 60, dragon.y + 45, 15, 8);
-}
-
-function drawFireball(f) {
-    ctx.fillStyle = "orange";
+function drawCloud(x,y){
+    ctx.fillStyle="white";
     ctx.beginPath();
-    ctx.arc(f.x, f.y, f.size, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "red";
-    ctx.beginPath();
-    ctx.arc(f.x, f.y, f.size / 2, 0, Math.PI * 2);
+    ctx.arc(x,y,20,0,Math.PI*2);
+    ctx.arc(x+25,y,25,0,Math.PI*2);
+    ctx.arc(x+50,y,20,0,Math.PI*2);
     ctx.fill();
 }
 
-function draw() {
+function drawBricks(){
+    for(let i=0;i<worldWidth;i+=40){
+        ctx.fillStyle="#b55239";
+        ctx.fillRect(i-cameraX,ground.y,38,48);
+        ctx.strokeStyle="#7a2d1d";
+        ctx.strokeRect(i-cameraX,ground.y,38,48);
+    }
+}
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function drawDragon(d,color){
+    ctx.fillStyle=color;
+    ctx.fillRect(d.x-cameraX,d.y,d.width,d.height);
+    ctx.fillStyle="yellow";
+    ctx.fillRect(d.x-cameraX+d.width-15,d.y+10,10,10);
+}
 
-    // Suelo
-    ctx.fillStyle = "#3cb043";
-    ctx.fillRect(0, ground.y, canvas.width, ground.height);
+function draw(){
 
-    // Zona fuego
-    ctx.fillStyle = "#5c0000";
-    ctx.fillRect(700, ground.y, 300, ground.height);
+    // Cielo azul bebé
+    ctx.fillStyle="#bde7ff";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // Partículas fuego
-    fireParticles.forEach(p => {
-        ctx.fillStyle = "orange";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-    });
+    // Nubes (efecto desplazamiento más lento)
+    drawCloud(200-cameraX*0.3,70);
+    drawCloud(600-cameraX*0.3,90);
+    drawCloud(1000-cameraX*0.3,60);
+    drawCloud(1500-cameraX*0.3,80);
 
-    drawDragon();
+    drawBricks();
+
+    // Mini dragones
+    miniDragons.forEach(d=>drawDragon(d,"#cc3333"));
+
+    // Dragón final
+    drawDragon(finalDragon,"#5e2ca5");
+
+    // Línea meta
+    ctx.fillStyle="black";
+    ctx.fillRect(finishLine-cameraX,250,10,100);
 
     // Jugador
-    ctx.fillStyle = "#ff3b3b";
-    ctx.fillRect(player.x, player.y, player.width, player.height);
+    ctx.fillStyle="#ff3b3b";
+    ctx.fillRect(player.x-cameraX,player.y,player.width,player.height);
 
-    fireballs.forEach(drawFireball);
+    if(gameOver){
+        ctx.fillStyle="black";
+        ctx.font="bold 45px Arial";
+        ctx.fillText("GAME OVER",350,170);
+        ctx.font="25px Arial";
+        ctx.fillText("Por no perdonar a tu princesa...",300,210);
+    }
 
-    if (gameOver) {
-        ctx.fillStyle = "black";
-        ctx.font = "bold 60px Arial";
-        ctx.fillText("GAME OVER", 300, 200);
+    if(levelComplete){
+        ctx.fillStyle="black";
+        ctx.font="bold 50px Arial";
+        ctx.fillText("NIVEL COMPLETADO",280,200);
     }
 }
 
-function loop() {
+function loop(){
     update();
     draw();
     requestAnimationFrame(loop);
@@ -198,6 +199,5 @@ function loop() {
 
 loop();
 </script>
-
 </body>
 </html>

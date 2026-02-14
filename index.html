@@ -1,164 +1,220 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>No peliemo ma pastelito 🥺</title>
+<title>Mi Juego</title>
 
 <style>
 body {
     margin: 0;
-    background: linear-gradient(to bottom right, #000000, #2b2b2b, #ffccd5);
-    font-family: Arial, sans-serif;
-    text-align: center;
     overflow: hidden;
-    color: white;
 }
 
-h1 {
-    margin-top: 100px;
-    font-size: 32px;
-}
-
-button {
-    padding: 15px 30px;
-    font-size: 18px;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: 0.3s;
-    margin: 20px;
-}
-
-#yesBtn {
-    background-color: black;
-    color: white;
-}
-
-#noBtn {
-    background-color: #ff4d4d;
-    color: white;
-    position: absolute;
-}
-
-#game {
-    display: none;
-    margin-top: 50px;
-}
-
-#final {
-    display: none;
-    margin-top: 50px;
-}
-
-img {
-    width: 300px;
-    border-radius: 20px;
-    margin-top: 20px;
-}
-
-/* corazones negros */
-.heart {
-    position: fixed;
-    color: black;
-    font-size: 20px;
-    animation: floatUp 4s linear infinite;
-}
-
-@keyframes floatUp {
-    from { transform: translateY(100vh); opacity: 1; }
-    to { transform: translateY(-10vh); opacity: 0; }
+canvas {
+    display: block;
+    margin: auto;
 }
 </style>
 </head>
 
 <body>
-
-<h1>Si te he fallado te pido perdón… 🥺<br>de la única forma que sé 🖤</h1>
-
-<button id="yesBtn">Sí te perdono 🖤</button>
-<button id="noBtn">No, seguimos peleando, te odio 😤</button>
-
-<div id="game">
-    <h2>Mini juego: Atrápame si puedes 😈</h2>
-    <button id="catchBtn">Atrápame</button>
-</div>
-
-<div id="final">
-    <h1>NO PELIEMO MA 🥺🖤</h1>
-    <p>Te amo incluso cuando me pongo intensa.</p>
-    <img src="no-peliemos.jpg" alt="no peliemo ma">
-</div>
-
-<!-- Música -->
-<iframe width="0" height="0"
-src="https://www.youtube.com/embed/6MZw_Iv0wd0?autoplay=1&loop=1&playlist=6MZw_Iv0wd0"
-frameborder="0" allow="autoplay"></iframe>
+<canvas id="game"></canvas>
 
 <script>
-let noBtn = document.getElementById("noBtn");
-let yesBtn = document.getElementById("yesBtn");
-let game = document.getElementById("game");
-let final = document.getElementById("final");
-let catchBtn = document.getElementById("catchBtn");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-let clickCount = 0;
+canvas.width = 1000;
+canvas.height = 400;
 
-// Botón que huye
-noBtn.addEventListener("mouseover", function() {
-    noBtn.style.top = Math.random() * window.innerHeight + "px";
-    noBtn.style.left = Math.random() * window.innerWidth + "px";
-});
+let level = 1;
+let gameOver = false;
 
-// Click al botón NO
-noBtn.addEventListener("click", function() {
-    clickCount++;
+// JUGADOR
+let player = {
+    x: 100,
+    y: 300,
+    width: 40,
+    height: 40,
+    dy: 0,
+    gravity: 0.6,
+    jumpPower: -12,
+    grounded: false
+};
 
-    if (clickCount < 3) {
-        noBtn.style.transform = "scale(" + (1 + clickCount) + ")";
-    } else {
-        game.style.display = "block";
-    }
-});
+let ground = {
+    y: 350,
+    height: 50
+};
 
-// Mini juego
-catchBtn.addEventListener("mouseover", function() {
-    catchBtn.style.position = "absolute";
-    catchBtn.style.top = Math.random() * window.innerHeight + "px";
-    catchBtn.style.left = Math.random() * window.innerWidth + "px";
-});
+// DRAGÓN NIVEL 1
+let dragon = {
+    x: 850,
+    y: 270,
+    width: 80,
+    height: 80
+};
 
-catchBtn.addEventListener("click", function() {
-    game.style.display = "none";
-    document.querySelector("h1").style.display = "none";
-    yesBtn.style.display = "none";
-    noBtn.style.display = "none";
-    final.style.display = "block";
-    createHearts();
-});
+let fireballs = [];
+let fireTimer = 0;
 
-// Si presiona sí desde el inicio
-yesBtn.addEventListener("click", function() {
-    document.querySelector("h1").style.display = "none";
-    yesBtn.style.display = "none";
-    noBtn.style.display = "none";
-    final.style.display = "block";
-    createHearts();
-});
+// NUBES
+let clouds = [
+    {x: 100, y: 60},
+    {x: 400, y: 90},
+    {x: 700, y: 70}
+];
 
-// Generar corazones negros flotando
-function createHearts() {
-    setInterval(function() {
-        let heart = document.createElement("div");
-        heart.className = "heart";
-        heart.innerHTML = "🖤";
-        heart.style.left = Math.random() * 100 + "vw";
-        document.body.appendChild(heart);
+let keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
 
-        setTimeout(() => {
-            heart.remove();
-        }, 4000);
-    }, 300);
+function resetPlayer() {
+    player.x = 100;
+    player.y = 300;
+    player.dy = 0;
 }
+
+function update() {
+
+    if (gameOver) return;
+
+    if (keys["ArrowRight"]) player.x += 5;
+    if (keys["ArrowLeft"]) player.x -= 5;
+
+    if (keys[" "] && player.grounded) {
+        player.dy = player.jumpPower;
+        player.grounded = false;
+    }
+
+    player.dy += player.gravity;
+    player.y += player.dy;
+
+    if (player.y + player.height >= ground.y) {
+        player.y = ground.y - player.height;
+        player.dy = 0;
+        player.grounded = true;
+    }
+
+    // Movimiento nubes
+    clouds.forEach(c => {
+        c.x += 0.3;
+        if (c.x > canvas.width + 100) c.x = -100;
+    });
+
+    if (level === 1) {
+
+        fireTimer++;
+        if (fireTimer > 90) {
+            fireballs.push({
+                x: dragon.x,
+                y: dragon.y + 40,
+                size: 18,
+                speed: 6
+            });
+            fireTimer = 0;
+        }
+
+        fireballs.forEach(f => {
+            f.x -= f.speed;
+
+            if (
+                player.x < f.x + f.size &&
+                player.x + player.width > f.x &&
+                player.y < f.y + f.size &&
+                player.y + player.height > f.y
+            ) {
+                gameOver = true;
+            }
+        });
+
+        // Si pasa el dragón → nivel 2
+        if (player.x > dragon.x + 100) {
+            level = 2;
+            resetPlayer();
+        }
+    }
+}
+
+function drawCloud(x, y) {
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.arc(x + 25, y, 25, 0, Math.PI * 2);
+    ctx.arc(x + 50, y, 20, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function drawBricks() {
+    for (let i = 0; i < canvas.width; i += 40) {
+        ctx.fillStyle = "#b55239";
+        ctx.fillRect(i, ground.y, 38, 48);
+        ctx.strokeStyle = "#7a2d1d";
+        ctx.strokeRect(i, ground.y, 38, 48);
+    }
+}
+
+function drawDragon() {
+    ctx.fillStyle = "#5e2ca5";
+    ctx.fillRect(dragon.x, dragon.y, dragon.width, dragon.height);
+
+    ctx.fillStyle = "yellow";
+    ctx.fillRect(dragon.x + 50, dragon.y + 20, 12, 12);
+}
+
+function drawFireball(f) {
+    ctx.fillStyle = "orange";
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, f.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "red";
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, f.size / 2, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function draw() {
+
+    // Cielo azul bebé
+    ctx.fillStyle = "#bde7ff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Nubes
+    clouds.forEach(c => drawCloud(c.x, c.y));
+
+    drawBricks();
+
+    if (level === 1) {
+        drawDragon();
+        fireballs.forEach(drawFireball);
+    }
+
+    if (level === 2) {
+        ctx.fillStyle = "black";
+        ctx.font = "50px Arial";
+        ctx.fillText("NIVEL 2", 400, 200);
+    }
+
+    ctx.fillStyle = "#ff3b3b";
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+
+    if (gameOver) {
+        ctx.fillStyle = "black";
+        ctx.font = "bold 40px Arial";
+        ctx.fillText("GAME OVER", 350, 180);
+        ctx.font = "25px Arial";
+        ctx.fillText("Por no perdonar a tu princesa...", 330, 220);
+    }
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+loop();
 </script>
 
 </body>

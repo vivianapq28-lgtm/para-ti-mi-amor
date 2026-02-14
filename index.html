@@ -1,284 +1,87 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Perdona a tu Princesa</title>
-
-<style>
-body{
-  margin:0;
-  overflow:hidden;
-  background:#8bb7ff; /* Azul Mario más suave */
-  font-family:monospace;
-}
-
-/* CONTENEDOR CÁMARA */
-#camera{
-  position:relative;
-  width:100vw;
-  height:100vh;
-  overflow:hidden;
-}
-
-/* MUNDO */
-#world{
-  position:absolute;
-  height:100%;
-  width:7000px;
-}
-
-/* PISO LADRILLO PIXEL */
-.ground{
-  position:absolute;
-  bottom:0;
-  width:7000px;
-  height:100px;
-  background:
-  repeating-linear-gradient(
-    90deg,
-    #c06030 0px,
-    #c06030 60px,
-    black 60px,
-    black 64px
-  ),
-  repeating-linear-gradient(
-    0deg,
-    #c06030 0px,
-    #c06030 30px,
-    black 30px,
-    black 34px
-  );
-}
-
-/* PERSONAJE */
-.player{
-  position:absolute;
-  width:40px;
-  height:40px;
-  background:#ffcc99;
-  border:4px solid black;
-  bottom:100px;
-  left:150px;
-}
-
-/* ENEMIGOS */
-.enemy{
-  position:absolute;
-  width:40px;
-  height:40px;
-  background:#8b0000;
-  border:4px solid black;
-  bottom:100px;
-}
-
-.dragon{
-  position:absolute;
-  width:80px;
-  height:80px;
-  background:#550000;
-  border:6px solid black;
-  bottom:100px;
-}
-
-/* META */
-.goal{
-  position:absolute;
-  width:20px;
-  height:120px;
-  background:yellow;
-  border:4px solid black;
-  bottom:100px;
-}
-
-/* OVERLAY */
-#overlay{
-  position:fixed;
-  width:100%;
-  height:100%;
-  background:black;
-  color:white;
-  display:none;
-  justify-content:center;
-  align-items:center;
-  flex-direction:column;
-  font-size:30px;
-  text-align:center;
-  z-index:999;
-}
-
-/* FUEGOS */
-.firework{
-  position:absolute;
-  width:6px;
-  height:6px;
-  background:yellow;
-}
-</style>
+  <meta charset="UTF-8">
+  <title>Mi Juego</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: black; }
+    canvas { display: block; margin: auto; background: linear-gradient(#87CEEB, #ffffff); }
+  </style>
 </head>
-
 <body>
 
-<div id="overlay"></div>
-
-<div id="camera">
-  <div id="world">
-    <div class="ground"></div>
-    <div class="player" id="player"></div>
-
-    <div class="enemy" style="left:1000px;"></div>
-    <div class="enemy" style="left:1800px;"></div>
-    <div class="enemy" style="left:2600px;"></div>
-
-    <div class="dragon" style="left:3800px;"></div>
-    <div class="goal" style="left:6000px;"></div>
-  </div>
-</div>
+<canvas id="game"></canvas>
 
 <script>
-const player = document.getElementById("player");
-const world = document.getElementById("world");
-const overlay = document.getElementById("overlay");
-const enemies = document.querySelectorAll(".enemy, .dragon");
-const goal = document.querySelector(".goal");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-let position = 150;
-let velocityY = 0;
-let gravity = 1;
-let jumping = false;
+canvas.width = 800;
+canvas.height = 400;
 
-let lives = 3;
-let level = 1;
-let perfectLevel = true;
+let player = {
+    x: 100,
+    y: 300,
+    width: 40,
+    height: 40,
+    dy: 0,
+    gravity: 0.6,
+    jumpPower: -12,
+    grounded: false
+};
 
-document.addEventListener("keydown", e=>{
-  if(e.key==="ArrowRight") position += 12;
-  if(e.key==="ArrowLeft") position -= 12;
-  if(e.key===" " && !jumping){
-    velocityY = -18;
-    jumping = true;
-  }
-});
+let ground = {
+    x: 0,
+    y: 350,
+    width: 800,
+    height: 50
+};
 
-function gameLoop(){
+let keys = {};
 
-  /* SALTO */
-  velocityY += gravity;
-  let bottom = parseInt(player.style.bottom||100);
-  bottom -= velocityY;
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
 
-  if(bottom <= 100){
-    bottom = 100;
-    velocityY = 0;
-    jumping = false;
-  }
+function update() {
 
-  player.style.bottom = bottom+"px";
-  player.style.left = position+"px";
+    if (keys["ArrowRight"]) player.x += 5;
+    if (keys["ArrowLeft"]) player.x -= 5;
 
-  /* CÁMARA */
-  let cameraX = position - 300;
-  if(cameraX < 0) cameraX = 0;
-  world.style.transform = `translateX(${-cameraX}px)`;
-
-  moveEnemies();
-  checkCollision();
-
-  requestAnimationFrame(gameLoop);
-}
-
-function moveEnemies(){
-  enemies.forEach(enemy=>{
-    let enemyX = parseInt(enemy.style.left);
-    if(enemyX > position){
-      enemy.style.left = (enemyX - 1.5)+"px";
-    } else {
-      enemy.style.left = (enemyX + 1.5)+"px";
+    if (keys[" "] && player.grounded) {
+        player.dy = player.jumpPower;
+        player.grounded = false;
     }
-  });
-}
 
-function checkCollision(){
-  enemies.forEach(enemy=>{
-    if(isColliding(player, enemy)){
-      loseLife();
+    player.dy += player.gravity;
+    player.y += player.dy;
+
+    if (player.y + player.height >= ground.y) {
+        player.y = ground.y - player.height;
+        player.dy = 0;
+        player.grounded = true;
     }
-  });
-
-  if(isColliding(player, goal)){
-    winLevel();
-  }
 }
 
-function isColliding(a,b){
-  const r1 = a.getBoundingClientRect();
-  const r2 = b.getBoundingClientRect();
-  return !(
-    r1.top > r2.bottom ||
-    r1.bottom < r2.top ||
-    r1.right < r2.left ||
-    r1.left > r2.right
-  );
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "green";
+    ctx.fillRect(ground.x, ground.y, ground.width, ground.height);
+
+    ctx.fillStyle = "red";
+    ctx.fillRect(player.x, player.y, player.width, player.height);
 }
 
-function loseLife(){
-  if(lives <= 0) return;
-
-  lives--;
-  perfectLevel = false;
-
-  overlay.innerHTML =
-  "JAJAJA TE TOCA OTRA VEZ POR BOBIS<br><br>NIVEL "+level+
-  "<br>VIDAS: "+lives+
-  "<br>PREPÁRATE PARA JUGAR, GROSERO";
-
-  overlay.style.display="flex";
-
-  resetPosition();
-
-  if(lives === 0){
-    setTimeout(()=>{
-      overlay.innerHTML="GAME OVER PAPITO,<br>YA PERDÓNAME";
-    },2000);
-  }else{
-    setTimeout(()=>{
-      overlay.style.display="none";
-    },2000);
-  }
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
 }
 
-function resetPosition(){
-  position = 150;
-  player.style.left="150px";
-}
-
-function winLevel(){
-  overlay.style.display="flex";
-
-  if(perfectLevel){
-    fireworks();
-  }
-
-  overlay.innerHTML="¿Muy feliz? Ahora te toca el otro 😡";
-
-  level++;
-  lives=3;
-  perfectLevel=true;
-}
-
-function fireworks(){
-  for(let i=0;i<100;i++){
-    let f=document.createElement("div");
-    f.className="firework";
-    f.style.left=Math.random()*window.innerWidth+"px";
-    f.style.top=Math.random()*300+"px";
-    document.body.appendChild(f);
-    setTimeout(()=>f.remove(),1000);
-  }
-}
-
-gameLoop();
+loop();
 </script>
 
 </body>
 </html>
+
 
